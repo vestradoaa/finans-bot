@@ -38,7 +38,7 @@ async def send_report(context: ContextTypes.DEFAULT_TYPE):
     tweets = ""
     for i, item in enumerate(news, 1):
         tweet_text = f"🔹 {item}\n\nAnaliz: Küresel piyasalarda bu gelişme volatiliteyi artırabilir. Kritik seviyeler takip edilmeli.\n\n#Finans #Ekonomi #Borsa"
-        tweets += f"📝 **Tweet Taslağı {i}:**\n`{tweet_text[:340]}`\n\n"
+        tweets += f"📝 **Tweet Taslağı {i}:**\n`{tweet_text[:330]}`\n\n"
     
     await context.bot.send_message(chat_id=MY_ID, text=header + tweets, parse_mode='Markdown')
 
@@ -52,15 +52,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_report(context)
 
 if __name__ == '__main__':
+    # Build kısmında job_queue'yu açıkça belirtiyoruz
     application = ApplicationBuilder().token(TOKEN).build()
-    job_queue = application.job_queue
-
-    # Türkiye saatiyle sabah 10:00 ayarı
-    tr_time = datetime.time(hour=10, minute=0, second=0, tzinfo=pytz.timezone('Europe/Istanbul'))
-    job_queue.run_daily(send_report, time=tr_time)
+    
+    # Zamanlayıcıyı kur
+    if application.job_queue:
+        tr_time = datetime.time(hour=10, minute=0, second=0, tzinfo=pytz.timezone('Europe/Istanbul'))
+        application.job_queue.run_daily(send_report, time=tr_time)
+        print("Zamanlayıcı aktif: Her gün 10:00")
+    else:
+        print("Hata: JobQueue başlatılamadı!")
 
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    print("Bot başlatılıyor...")
     application.run_polling()
