@@ -1,4 +1,3 @@
-python-telegram-bot[job-queue]==21.1
-requests
-beautifulsoup4
+python-telegram-bot[job-queue]
+feedparser
 pytz
