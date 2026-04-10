@@ -1,12 +1,10 @@
 import logging
 import requests
-import os
+import datetime
+import pytz
 from bs4 import BeautifulSoup
-from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 # Ayarlar
 TOKEN = "8267555325:AAE_HZbu1YNNFB3_DSXUSrq2NqiAvFJbO90"
@@ -32,15 +30,15 @@ def get_finance_news():
     except: pass
     return list(set(news_list))[:5]
 
-async def prepare_and_send_report(context: ContextTypes.DEFAULT_TYPE):
+async def send_report(context: ContextTypes.DEFAULT_TYPE):
     news = get_finance_news()
     if not news: return
     
-    header = f"📅 **{datetime.now().strftime('%d/%m/%Y')} FİNANS RAPORU**\n\n"
+    header = f"📅 **{datetime.datetime.now().strftime('%d/%m/%Y')} FİNANS RAPORU**\n\n"
     tweets = ""
     for i, item in enumerate(news, 1):
         tweet_text = f"🔹 {item}\n\nAnaliz: Küresel piyasalarda bu gelişme volatiliteyi artırabilir. Kritik seviyeler takip edilmeli.\n\n#Finans #Ekonomi #Borsa"
-        tweets += f"📝 **Tweet Taslağı {i}:**\n`{tweet_text[:350]}`\n\n"
+        tweets += f"📝 **Tweet Taslağı {i}:**\n`{tweet_text[:340]}`\n\n"
     
     await context.bot.send_message(chat_id=MY_ID, text=header + tweets, parse_mode='Markdown')
 
@@ -51,17 +49,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.answer()
-    await prepare_and_send_report(context)
+    await send_report(context)
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(TOKEN).build()
-    
-    # Zamanlayıcıyı kur (Her gün sabah 10:00)
-    scheduler = AsyncIOScheduler(timezone="Europe/Istanbul")
-    scheduler.add_job(prepare_and_send_report, CronTrigger(hour=10, minute=0), args=[application.job_queue])
-    scheduler.start()
+    job_queue = application.job_queue
+
+    # Türkiye saatiyle sabah 10:00 ayarı
+    tr_time = datetime.time(hour=10, minute=0, second=0, tzinfo=pytz.timezone('Europe/Istanbul'))
+    job_queue.run_daily(send_report, time=tr_time)
 
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CallbackQueryHandler(button_handler))
     
+    print("Bot başlatılıyor...")
     application.run_polling()
